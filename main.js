@@ -1,26 +1,10 @@
-const { app, BrowserWindow } = require('electron');
-const path = require('path');
-
-let mainWindow;
-
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    title: "Shivra Browser :zap:",
-     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
-      webviewTag: true
-    }
-  });
-
-  mainWindow.loadFile('index.html');
+function createFrame(url) {
+  const iframe = document.createElement("iframe");
+  if (url) iframe.src = url;
+  iframe.style.width = "100%";
+  iframe.style.height = "100%";
+  iframe.style.border = "none";
+  iframe.style.display = "none";
+  content.appendChild(iframe);
+  return iframe;
 }
-
-app.whenReady().then(createWindow);
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
