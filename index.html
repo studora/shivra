@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Shivra Browser</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="tabs-container">
+    <div id="tabs"></div>
+  </div>
+
+  <div id="toolbar">
+    <div id="branding">
+      <div id="logo">⚡ Shivra</div>
+      <div id="engine">Browser Engine</div>
+    </div>
+    <div id="controls">
+      <div style="position:relative; flex:1;">
+        <input id="url" type="text" placeholder="Search or enter address" autocomplete="off">
+        <div id="suggestions"></div>
+      </div>
+      <button onclick="go()">Go</button>
+      <button onclick="home()">Home</button>
+    </div>
+  </div>
+
+  <div id="content"></div>
+
+  <script>
+    let tabs = [];
+    let activeTab = -1;
+    let history = [];
+
+    const urlBox = document.getElementById("url");
+    const suggestionBox = document.getElementById("suggestions");
+    const content = document.getElementById("content");
+
+    function createWebview(url) {
+      const webview = document.createElement("webview");
+      if (url) webview.src = url;
+      webview.setAttribute("allowpopups", "true");
+      webview.style.width = "100%";
+      webview.style.height = "100%";
+      webview.style.border = "none";
+      webview.style.display = "none";
+
+      webview.addEventListener("page-title-updated", (e) => {
+        tabs[activeTab].title = e.title;
+        renderTabs();
+      });
+      webview.addEventListener("page-favicon-updated", (e) => {
+        if (e.favicons && e.favicons.length > 0) {
+          tabs[activeTab].favicon = e.favicons[0];
+          renderTabs();
+        }
+      });
+
+      content.appendChild(webview);
+      return webview;
+    }
+
+    function renderTabs() {
+      const container = document.getElementById("tabs");
+      container.innerHTML = "";
+      tabs.forEach((tab, i) => {
+        const div = document.createElement("div");
+        div.className = "tab" + (i === activeTab ? " active" : "");
+        div.innerHTML = `
+          ${tab.favicon ? `<img src="${tab.favicon}" class="favicon">` : "🌐"}
+          <span class="tab-title">${tab.title}</span>
+          <span class="close" onclick="closeTab(event,${i})">×</span>`;
+        div.onclick = () => switchTab(i);
+        container.appendChild(div);
+      });
+      const addBtn = document.createElement("div");
+      addBtn.className = "tab add-tab";
+      addBtn.textContent = "+";
+      addBtn.onclick = newTab;
+      container.appendChild(addBtn);
+    }
+
+    function normalizeUrl(input) {
+      if (!/^https?:\/\//i.test(input)) {
+        if (input.includes(".")) {
+          return "https://" + input;
+        } else {
+          const match = history
+            .filter(h => h.url.toLowerCase().includes(input.toLowerCase()))
+            .sort((a, b) => b.visits - a.visits)[0];
+          if (match) return match.url;
+          return "https://" + input + ".com";
+        }
+      }
+      return input;
+    }
+
+    function go() {
+      const rawInput = urlBox.value.trim();
+      if (!rawInput) return;
+      const finalUrl = normalizeUrl(rawInput);
+
+      const tab = tabs[activeTab];
+      tab.url = finalUrl;
+      tab.title = rawInput;
+      tab.view.src = finalUrl;
+      renderTabs();
+
+      let found = history.find(h => h.url === finalUrl);
+      if (found) {
+        found.visits++;
+      } else {
+        history.push({ url: finalUrl, title: rawInput, visits: 1 });
+      }
+    }
+
+    function home() {
+      const homeUrl = "https://example.com";
+      const tab = tabs[activeTab];
+      urlBox.value = homeUrl;
+      tab.url = homeUrl;
+      tab.title = "Home";
+      tab.view.src = homeUrl;
+      renderTabs();
+    }
+
+    function switchTab(index) {
+      tabs.forEach((t, i) => {
+        if (t.view) t.view.style.display = (i === index ? "block" : "none");
+      });
+
+      activeTab = index;
+      urlBox.value = tabs[activeTab].url || "";
+      renderTabs();
+    }
+
+    function closeTab(event, index) {
+      event.stopPropagation();
+      const tab = tabs[index];
+      if (tab.view) tab.view.remove();
+      tabs.splice(index, 1);
+      if (activeTab >= tabs.length) activeTab = Math.max(0, tabs.length - 1);
+      if (tabs.length === 0) {
+        newTab();
+      } else {
+        switchTab(activeTab);
+      }
+    }
+
+    function newTab() {
+      const newWebview = createWebview("");
+      const tab = { title: "New Tab", url: "", favicon: null, view: newWebview };
+      tabs.push(tab);
+      activeTab = tabs.length - 1;
+      switchTab(activeTab);
+    }
+
+    urlBox.addEventListener("input", () => {
+      const query = urlBox.value.toLowerCase();
+      suggestionBox.innerHTML = "";
+      if (!query) return;
+      const matches = history
+        .filter(h => h.url.toLowerCase().includes(query))
+        .sort((a, b) => b.visits - a.visits)
+        .slice(0, 5);
+
+      matches.forEach(m => {
+        const item = document.createElement("div");
+        item.className = "suggestion";
+        item.textContent = m.url;
+        item.onclick = () => {
+          urlBox.value = m.url;
+          suggestionBox.innerHTML = "";
+          go();
+        };
+        suggestionBox.appendChild(item);
+      });
+    });
+
+    newTab();
+  </script>
+</body>
+</html>
