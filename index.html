@@ -36,28 +36,15 @@
     const suggestionBox = document.getElementById("suggestions");
     const content = document.getElementById("content");
 
-    function createWebview(url) {
-      const webview = document.createElement("webview");
-      if (url) webview.src = url;
-      webview.setAttribute("allowpopups", "true");
-      webview.style.width = "100%";
-      webview.style.height = "100%";
-      webview.style.border = "none";
-      webview.style.display = "none";
-
-      webview.addEventListener("page-title-updated", (e) => {
-        tabs[activeTab].title = e.title;
-        renderTabs();
-      });
-      webview.addEventListener("page-favicon-updated", (e) => {
-        if (e.favicons && e.favicons.length > 0) {
-          tabs[activeTab].favicon = e.favicons[0];
-          renderTabs();
-        }
-      });
-
-      content.appendChild(webview);
-      return webview;
+    function createFrame(url) {
+      const frame = document.createElement("iframe");
+      if (url) frame.src = url;
+      frame.style.width = "100%";
+      frame.style.height = "100%";
+      frame.style.border = "none";
+      frame.style.display = "none";
+      content.appendChild(frame);
+      return frame;
     }
 
     function renderTabs() {
@@ -67,8 +54,7 @@
         const div = document.createElement("div");
         div.className = "tab" + (i === activeTab ? " active" : "");
         div.innerHTML = `
-          ${tab.favicon ? `<img src="${tab.favicon}" class="favicon">` : "🌐"}
-          <span class="tab-title">${tab.title}</span>
+          🌐 <span class="tab-title">${tab.title}</span>
           <span class="close" onclick="closeTab(event,${i})">×</span>`;
         div.onclick = () => switchTab(i);
         container.appendChild(div);
@@ -128,7 +114,6 @@
       tabs.forEach((t, i) => {
         if (t.view) t.view.style.display = (i === index ? "block" : "none");
       });
-
       activeTab = index;
       urlBox.value = tabs[activeTab].url || "";
       renderTabs();
@@ -148,8 +133,8 @@
     }
 
     function newTab() {
-      const newWebview = createWebview("");
-      const tab = { title: "New Tab", url: "", favicon: null, view: newWebview };
+      const newFrame = createFrame("");
+      const tab = { title: "New Tab", url: "", view: newFrame };
       tabs.push(tab);
       activeTab = tabs.length - 1;
       switchTab(activeTab);
